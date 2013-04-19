@@ -9,16 +9,16 @@ Syntax
 
 Examples::
 
-  $ beets top artists
-  $ beets 100 top artists
-  $ beets top artists by albums
-  $ beets 42 top artists by time
-  $ beets top genres by tracks
-  $ beets top years by albums
+  $ beet top artists
+  $ beet top 100 artists
+  $ beet top artists by albums
+  $ beet top 42 artists by time
+  $ beet top genres by tracks
+  $ beet top years by albums
 
 In general::
 
-  $ beets top [count] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}]
+  $ beet top [count] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}]
 
 
 Installation
