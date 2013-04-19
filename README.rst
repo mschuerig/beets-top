@@ -7,6 +7,8 @@ See beets at http://beets.radbox.org/
 Syntax
 ------
 
+Examples::
+
   $ beets top artists
   $ beets 100 top artists
   $ beets top artists by albums
@@ -14,7 +16,7 @@ Syntax
   $ beets top genres by tracks
   $ beets top years by albums
 
-In general
+In general::
 
   $ beets top [count] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}]
 
