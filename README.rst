@@ -12,13 +12,13 @@ Examples::
   $ beet top artists
   $ beet top 100 artists
   $ beet top artists by albums
-  $ beet top 42 artists by time
+  $ beet top 42 artists by time in 1990,1995-2000
   $ beet top genres by tracks
   $ beet top years by albums
 
 In general::
 
-  $ beet top [count] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}]
+  $ beet top [<count>] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}] [in <years>]
 
 
 Installation
