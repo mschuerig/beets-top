@@ -21,13 +21,14 @@ from beets import ui
 from beets import util
 from datetime import timedelta
 from string import Template
+import logging
 
 SQL = Template(
   "select $what, count(*) as albums, sum(tracks) as tracks, sum(length) as time from "
-  "(select $what, album, count(*) as tracks, sum(length) as length from items group by $what, album) "
+  "(select $what, album, count(*) as tracks, sum(length) as length from items $where group by $what, album) "
   "group by $what "
   "order by $order desc "
-  "limit $limit"
+  "limit $count"
 )
 
 WHATS = {
@@ -36,6 +37,7 @@ WHATS = {
   "composers":    "composer",
   "formats":      "format",
   "genres":       "genre",
+  "labels":       "label",
   "years":        "year"
 }
 ORDERS = {
@@ -46,10 +48,14 @@ ORDERS = {
 DEFAULT_COUNT = 10
 DEFAULT_ORDER = "albums"
 
+log = logging.getLogger('beets')
+
 def top(lib, args, opts):
-  what, order, count = parse_args(args)
+  params = parse_args(args)
+  q = SQL.substitute(params)
+  log.debug(q)
   with lib.transaction() as tx:
-    rows = tx.query(SQL.substitute(what=what, order=order, limit=count))
+    rows = tx.query(q)
   print_result(rows, opts)
 
 def print_result(rows, opts):
@@ -57,6 +63,8 @@ def print_result(rows, opts):
     print "%s - %d - %d - %s" % (what, albums, tracks, timedelta(seconds=int(time)))
   
 def parse_args(args):
+  what  = None
+  where = None
   count = DEFAULT_COUNT
   order = DEFAULT_ORDER
   if len(args) >= 1:
@@ -69,9 +77,20 @@ def parse_args(args):
     args = args[1:]
   if len(args) >= 1:
     order, args = ORDERS.get(args[0]), args[1:]
+  if len(args) >= 2 and args[0] == "in":
+    args = args[1:]
+  if len(args) >= 1:
+    years, args = expand_years(args[0]), args[1:]
+    where = "where year in (%s)" % ','.join(years)
+  
   if not what or not order or not count:
     raise ui.UserError(u'invalid arguments')
-  return what, order, count
+  return { 'what': what, 'where': where, 'order': order, 'count': count }
+
+def expand_years(years_spec):
+  ranges = [[int(y) for y in se.split('-')] for se in years_spec.split(',')]
+  years = [range(r[0], r[1] + 1) if len(r) > 1 else [r[0]] for r in ranges]
+  return [str(y) for yrs in years for y in yrs]
   
 class TopPlugin(BeetsPlugin):
   def commands(self):
