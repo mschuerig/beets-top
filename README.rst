@@ -18,7 +18,7 @@ Examples::
 
 In general::
 
-  $ beet top [<count>] {artists, genres, years, albumartists, composers} [by {albums, tracks, time}] [in <years>]
+  $ beet top [<count>] {artists, albumartists, formats, genres, labels, years, composers} [by {albums, tracks, time}] [in <years>]
 
 
 Installation

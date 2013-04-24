@@ -75,13 +75,12 @@ def parse_args(args):
         what, args = WHATS.get(args[0]), args[1:]
     if len(args) >= 2 and args[0] == "by":
         args = args[1:]
-    if len(args) >= 1:
         order, args = ORDERS.get(args[0]), args[1:]
     if len(args) >= 2 and args[0] == "in":
         args = args[1:]
-    if len(args) >= 1:
         years, args = expand_years(args[0]), args[1:]
-        where = "where year in (%s)" % ','.join(years)
+        ys = ','.join(years)
+        where = "where (original_year <> 0 and original_year in (%s)) or (original_year = 0 and year in (%s))" % (ys, ys)
 
     if not what or not order or not count:
         raise ui.UserError(u'invalid arguments')
