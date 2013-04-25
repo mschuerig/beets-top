@@ -24,14 +24,14 @@ from string import Template
 import logging
 
 SQL = Template(
-    "select $what, count(*) as albums, sum(tracks) as tracks, sum(length) as time from "
-    "(select $what, album, count(*) as tracks, sum(length) as length from $table group by $what, album) "
-    "group by $what "
+    "select $subject, count(*) as albums, sum(tracks) as tracks, sum(length) as time from "
+    "(select $subject, album, count(*) as tracks, sum(length) as length from $table group by $subject, album) "
+    "group by $subject "
     "order by $order desc "
     "limit $count"
 )
 
-WHATS = {
+SUBJECTS = {
     "artists":      "artist",
     "albumartists": "albumartist",
     "composers":    "composer",
@@ -41,9 +41,16 @@ WHATS = {
     "years":        "year"
 }
 ORDERS = {
-    "albums": "albums",
-    "tracks": "tracks",
-    "time":   "time"
+    "albums":  "albums",
+    "tracks":  "tracks",
+    "time":    "time",
+    "seconds": "time"
+}
+TEMPLATES = {
+    "albums":  Template("$subject - $albums albums"),
+    "tracks":  Template("$subject - $tracks tracks"),
+    "time":    Template("$subject - $time"),
+    "seconds": Template("$subject - $seconds")
 }
 DEFAULT_COUNT = 10 # TODO read from config
 DEFAULT_ORDER = "albums" # TODO read from config
@@ -51,21 +58,24 @@ DEFAULT_ORDER = "albums" # TODO read from config
 log = logging.getLogger('beets')
 
 def top(lib, args, opts):
-    params = parse_args(args)
+    params = parse_args(args, opts)
     q = SQL.substitute(params)
     log.debug(q)
     with lib.transaction() as tx:
         rows = tx.query(q, params['subvals'])
-    print_result(rows, opts)
+    print_result(rows, params['template'])
 
-def print_result(rows, opts):
-    for what, albums, tracks, time in rows:
-        # TODO use a template and allow user to set it
-        print "%s - %d - %d - %s" % (what, albums, tracks, timedelta(seconds=int(time)))
+def print_result(rows, template):
+    for subject, albums, tracks, secs in rows:
+        seconds = int(secs)
+        time    = timedelta(seconds=seconds)
+        print template.safe_substitute(
+            subject=subject, albums=albums, tracks=tracks, seconds=seconds, time=time
+        )
   
-def parse_args(args):
+def parse_args(args, opts):
     # TODO use options instead of interspersed keywords
-    what    = None
+    subject    = None
     table   = 'items'
     count   = DEFAULT_COUNT
     order   = DEFAULT_ORDER
@@ -75,19 +85,28 @@ def parse_args(args):
             count = int(args[0])
             args = args[1:]
     if len(args) >= 1:
-        what, args = WHATS.get(args[0]), args[1:]
+        subject, args = SUBJECTS.get(args[0]), args[1:]
     if len(args) >= 2 and args[0] == "by":
         args = args[1:]
-        order, args = ORDERS.get(args[0]), args[1:]
+        by, args = args[0], args[1:]
+        order = ORDERS.get(by)
+        template = TEMPLATES.get(by)
     if len(args) >= 2 and args[0] == "in":
         args = args[1:]
         table2, subvals2 = library.get_query(args).statement()
         table = '(' + table2 + ')'
         subvals += subvals2
 
-    if not what or not order or not count:
+    if not subject or not order or not count:
         raise ui.UserError(u'invalid arguments')
-    return { 'what': what, 'table': table, 'order': order, 'count': count, 'subvals': subvals }
+    return {
+        'subject':  subject,
+        'table':    table,
+        'order':    order,
+        'count':    count,
+        'template': template,
+        'subvals':  subvals
+    }
 
 class TopPlugin(BeetsPlugin):
     def commands(self):
