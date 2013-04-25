@@ -25,7 +25,7 @@ import logging
 
 SQL = Template(
     "select $what, count(*) as albums, sum(tracks) as tracks, sum(length) as time from "
-    "(select $what, album, count(*) as tracks, sum(length) as length from items $where group by $what, album) "
+    "(select $what, album, count(*) as tracks, sum(length) as length from $table group by $what, album) "
     "group by $what "
     "order by $order desc "
     "limit $count"
@@ -45,8 +45,8 @@ ORDERS = {
     "tracks": "tracks",
     "time":   "time"
 }
-DEFAULT_COUNT = 10
-DEFAULT_ORDER = "albums"
+DEFAULT_COUNT = 10 # TODO read from config
+DEFAULT_ORDER = "albums" # TODO read from config
 
 log = logging.getLogger('beets')
 
@@ -55,18 +55,21 @@ def top(lib, args, opts):
     q = SQL.substitute(params)
     log.debug(q)
     with lib.transaction() as tx:
-        rows = tx.query(q)
+        rows = tx.query(q, params['subvals'])
     print_result(rows, opts)
 
 def print_result(rows, opts):
     for what, albums, tracks, time in rows:
+        # TODO use a template and allow user to set it
         print "%s - %d - %d - %s" % (what, albums, tracks, timedelta(seconds=int(time)))
   
 def parse_args(args):
-    what  = None
-    where = None
-    count = DEFAULT_COUNT
-    order = DEFAULT_ORDER
+    # TODO use options instead of interspersed keywords
+    what    = None
+    table   = 'items'
+    count   = DEFAULT_COUNT
+    order   = DEFAULT_ORDER
+    subvals = []
     if len(args) >= 1:
         if args[0].isdigit():
             count = int(args[0])
@@ -78,19 +81,14 @@ def parse_args(args):
         order, args = ORDERS.get(args[0]), args[1:]
     if len(args) >= 2 and args[0] == "in":
         args = args[1:]
-        years, args = expand_years(args[0]), args[1:]
-        ys = ','.join(years)
-        where = "where (original_year <> 0 and original_year in (%s)) or (original_year = 0 and year in (%s))" % (ys, ys)
+        table2, subvals2 = library.get_query(args).statement()
+        table = '(' + table2 + ')'
+        subvals += subvals2
 
     if not what or not order or not count:
         raise ui.UserError(u'invalid arguments')
-    return { 'what': what, 'where': where, 'order': order, 'count': count }
+    return { 'what': what, 'table': table, 'order': order, 'count': count, 'subvals': subvals }
 
-def expand_years(years_spec):
-    ranges = [[int(y) for y in se.split('-')] for se in years_spec.split(',')]
-    years = [range(r[0], r[1] + 1) if len(r) > 1 else [r[0]] for r in ranges]
-    return [str(y) for yrs in years for y in yrs]
-  
 class TopPlugin(BeetsPlugin):
     def commands(self):
         cmd = ui.Subcommand('top', help='show top artists, genres, years, or labels')
