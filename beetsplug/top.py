@@ -47,11 +47,19 @@ ORDERS = {
     "seconds": "time"
 }
 TEMPLATES = {
+    "albumartist": Template("$subject"),
     "albums":  Template("$subject - $albums albums"),
+    "artist": Template("$subject"),
+    "composer": Template("$subject"),
+    "format": Template("$subject"),
+    "genre": Template("$subject"),
+    "label": Template("$subject"),
+    "seconds": Template("$subject - $seconds"),
     "tracks":  Template("$subject - $tracks tracks"),
     "time":    Template("$subject - $time"),
-    "seconds": Template("$subject - $seconds")
+    "year": Template("$subject")
 }
+
 DEFAULT_COUNT = 10 # TODO read from config
 DEFAULT_ORDER = "albums" # TODO read from config
 
@@ -86,6 +94,7 @@ def parse_args(args, opts):
             args = args[1:]
     if len(args) >= 1:
         subject, args = SUBJECTS.get(args[0]), args[1:]
+        template = TEMPLATES.get(subject)
     if len(args) >= 2 and args[0] == "by":
         args = args[1:]
         by, args = args[0], args[1:]
